@@ -2,7 +2,7 @@ import os
 import random
 
 
-def random_word():
+def random_word() -> str:
     words = [
         "PYTHON",
         "HANGMAN",
@@ -29,7 +29,11 @@ def random_word():
     return words[random.randrange(0, len(words))]
 
 
-def word_from_file():
+def is_letter(char: str) -> bool:
+    return char.isalpha()
+
+
+def word_from_file() -> str:
     os.system("cls")
 
     while True:
@@ -44,15 +48,11 @@ def word_from_file():
             continue
 
         with open(filename, 'r') as file:
-            words = [word.strip() for word in file if len(word.strip()) > 0]
+            words = [word.strip() for word in file if len(word.strip()) > 0 and word.strip().isalpha()]
 
-            if not words:
-                print("No words found in file, try again.")
-                continue
+        if not words:
+            print("No valid words found in file.")
+            print("Only words containing strictly English letters are supported, try again.")
+            continue
 
-            selection = ""
-            while len(selection) < 1:
-                selection = words[random.randrange(0, len(words))]
-                print(selection)
-
-            return selection.upper()
+        return words[random.randrange(0, len(words))].upper()

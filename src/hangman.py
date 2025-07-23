@@ -24,8 +24,8 @@ class Hangman:
             else:
                 letter = input(f"'{letter}' already guessed, guess again: ").upper()
 
-            while len(letter) != 1:
-                letter = input("Please enter a single character: ").upper()
+            while len(letter) != 1 and not letter.isalpha():
+                letter = input("Please enter a single English letter character: ").upper()
 
             if letter in self.guessed:
                 continue
@@ -99,9 +99,13 @@ class Hangman:
                 return select.word_from_file()
             elif choice == '3':
                 while True:
-                    user_word = input("Enter a word: ").upper()
+                    user_word = input("Enter a word: ").strip().upper()
                     if len(user_word) < 1:
                         print("Can't play without a word...")
+                        continue
+
+                    if not user_word.isalpha():
+                        print("Only words containing strictly English letters are supported, try again.")
                         continue
 
                     happy = input(f"Use '{user_word}'? (y/n)").lower()
