@@ -1,0 +1,241 @@
+MAIN PROGRAM
+    IF PROGRAM NAME IS "__main__" THEN
+        DECLARE game AS NEW Hangman 
+        CALL game.play
+    END IF
+END PROGRAM
+
+
+CLASS Hangman
+	DECLARE CONSTANT components AS ARRAY OF CHAR <- ['O', '/', '|', '\\', '-', '/', '\\']
+    DECLARE CONSTANT max_guesses AS INTEGER <- 7
+    DECLARE guessed AS ARRAY OF CHAR <- EMPTY
+    DECLARE failed_guesses AS INTEGER <- 0
+    DECLARE unfortunate_soul AS ARRAY OF CHAR <- EMPTY
+    DECLARE word AS ARRAY OF CHAR <- EMPTY
+    DECLARE target_word AS STRING <- EMPTY
+
+    FUNCTION game_loop
+        DECLARE letter AS CHAR <- EMPTY
+        WHILE failed_guesses LESS THAN max_guesses DO
+            IF letter IS EMPTY THEN
+                DISPLAY "Take a guess: "
+                READ letter
+                SET letter TO UPPERCASE(letter)
+            ELSE
+                DISPLAY CONCATENATE(letter, " already guessed, guess again: ")
+                READ letter
+                SET letter TO UPPERCASE(letter)
+            END IF
+
+            WHILE LENGTH(letter) IS NOT EQUAL 1 AND NOT CALL isalpha(letter) DO
+                DISPLAY "Please enter a single English letter character: "
+                READ letter
+                SET letter TO UPPERCASE(letter)
+            END WHILE
+
+            IF letter IS IN guessed THEN
+                CONTINUE LOOP
+            ELSE
+                APPEND letter TO guessed
+            END IF
+
+            IF NOT CALL in_word(letter) THEN
+                INCREMENT failed_guesses
+                CALL update_unfortunate_soul
+            ELSE IF CALL game_won THEN
+                CALL update_screen
+                DISPLAY CONCATENATE(target_word, " - You got it!")
+                RETURN
+            END IF
+
+            CALL update_screen
+            SET letter TO EMPTY
+        END WHILE
+
+        DISPLAY "Game Over"
+        DISPLAY CONCATENATE("The word was: ", target_word)
+    END FUNCTION
+
+    FUNCTION game_won
+        IF '_' IN word THEN
+            RETURN FALSE
+        ELSE
+            RETURN TRUE
+        END IF
+    END FUNCTION
+
+    FUNCTION init_game
+        SET guessed TO EMPTY
+        SET failed_guesses TO 0
+        SET unfortunate_soul TO ARRAY OF ' ' WITH LENGTH(max_guesses)
+        SET target_word TO CALL select_word
+        SET word TO ARRAY OF '_' WITH LENGTH(target_word)
+        CALL update_screen
+    END FUNCTION
+
+    FUNCTION play
+        WHILE TRUE DO
+            CALL init_game
+            CALL game_loop
+
+            WHILE TRUE DO
+                DISPLAY "Play again y/n?"
+                READ choice
+                SET choice TO LOWERCASE(choice)
+
+                IF choice IS 'y' THEN
+                    BREAK
+                END IF
+                
+                IF choice IS 'n' THEN
+                    RETURN
+                END IF
+            END WHILE
+
+        END WHILE
+    END FUNCTION
+			
+    FUNCTION select_word
+        CLEAR SCREEN
+        DISPLAY " Welcome to Hangman"
+        DISPLAY "--------------------"
+        DISPLAY
+        DISPLAY "Press `Ctrl + C` at any time to exit."
+        DISPLAY
+        DISPLAY "How do you want to play?"
+        DISPLAY "\t1. Have the game select a random word."
+        DISPLAY "\t2. Provide a text file of words to be selected at random."
+        DISPLAY "\t3. Provide your own word."
+        DISPLAY
+
+        WHILE TRUE DO
+            DISPLAY "Please enter 1, 2, or 3: "
+            READ choice
+            
+            IF choice IS '1' THEN
+                RETURN CALL random_word
+            ELSE IF choice IS '2' THEN
+                RETURN CALL word_from_file
+            ELSE IF choice IS '3' THEN
+                WHILE TRUE DO
+                    DISPLAY "Enter a word: "
+                    READ user_word
+                    SET user_word TO CALL strip(user_word)
+                    SET user_word TO UPPERCASE(user_word)
+
+                    IF LENGTH(user_word) IS LESS THAN 1 THEN
+                        DISPLAY "Can't play without a word..."
+                        CONTINUE LOOP
+                    END IF
+
+                    IF NOT CALL isalpha(user_word) THEN
+                        DISPLAY "Only words containing strictly English letters are supported, try again."
+                        CONTINUE LOOP
+                    END IF
+
+                    DISPLAY CONCATENATE("Use '", user_word, "'? (y/n)")
+                    READ happy
+                    SET happy TO LOWERCASE(happy)
+
+                    IF happy IS EQUAL TO 'y' THEN
+                        RETURN user_word
+                    END IF
+                END WHILE
+            END IF
+
+        END WHILE
+    END FUNCTION
+
+    FUNCTION update_screen
+        CLEAR SCREEN
+        DISPLAY CALL join(' ', word)
+        DISPLAY " .----."
+        DISPLAY " |    |"
+        DISPLAY CONCATENATE(" | ", unfortunate_soul[0])
+        DISPLAY CONCATENATE(" | ", unfortunate_soul[1], unfortunate_soul[2], unfortunate_soul[3], )
+        DISPLAY CONCATENATE(" | ", unfortunate_soul[4])
+        DISPLAY CONCATENATE(" | ", unfortunate_soul[5], unfortunate_soul[6],)
+        DISPLAY " | "
+        DISPLAY " ------------- " 
+        DISPLAY CALL join(',', guessed)
+        DISPLAY
+    END FUNCTION
+
+    FUNCTION update_unfortunate_soul
+        FOR i FROM 0 TO failed_guesses DO
+            SET unfortunate_soul[i] TO components[i]
+        END FOR
+    END FUNCTION
+
+END CLASS
+
+FUNCTION random_word
+    DECLARE words AS ARRAY OF STRING <- [
+        "PYTHON",
+        "HANGMAN",
+        "COMPUTER",
+        "PROGRAM",
+        "FUNCTION",
+        "VARIABLE",
+        "KEYBOARD",
+        "MONITOR",
+        "PRINTER",
+        "NETWORK",
+        "INTERNET",
+        "SOFTWARE",
+        "HARDWARE",
+        "ALGORITHM",
+        "DEBUGGING",
+        "DATABASE",
+        "PROCESSOR",
+        "LANGUAGE",
+        "SYNTAX",
+        "COMPILER"
+    ]
+
+    DECLARE index AS INTEGER <- RANDOM(0 TO LENGTH(words))
+    RETURN words[index]
+END FUNCTION
+
+FUNCTION word_from_file
+    CLEAR SCREEN
+
+    WHILE TRUE DO
+        DISPLAY "Please enter the name of a text file in the local directory: "
+        READ filename
+
+        IF NOT filename ENDS WITH ".txt" THEN
+            DISPLAY "Only accepting '.txt' files at this time, try again."
+            CONTINUE LOOP
+        END IF
+
+        IF NOT FILE_EXISTS(filename) THEN
+            DISPLAY CONCATENATE(filename, " was not found in the local directory, try again.")
+            CONTINUE LOOP
+        END IF
+
+        DECLARE words AS ARRAY OF STRING <- EMPTY
+        DECLARE word AS STRING <- EMPTY
+
+        DECLARE file AS FILE_POINTER <- OPEN filename FOR READING
+            WHILE file IS NOT EOF DO
+                READ FROM file INTO word
+                SET word TO CALL strip(word)
+                IF LENGTH(word) IS GREATER THAN 0 AND CALL isalpha(word) THEN
+                    APPEND word TO words
+                END IF
+            END WHILE
+        CLOSE filename
+
+        IF LENGTH(words) IS 0 THEN
+            DISPLAY "No valid words found in file."
+            DISPLAY "Only words containing strictly English letters are supported, try again."
+            CONTINUE LOOP
+        END IF
+
+        DECLARE index AS INTEGER <- RANDOM(0 TO LENGTH(words))
+        RETURN words[index]
+    END WHILE
+END FUNCTION
+
